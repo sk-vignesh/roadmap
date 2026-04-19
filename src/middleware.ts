@@ -5,7 +5,6 @@ import { routing } from '@/i18n/routing'
 
 const intlMiddleware = createMiddleware(routing)
 
-const protectedPaths = ['/my', '/profile', '/user/']
 const adminPaths = ['/admin']
 
 export async function middleware(request: NextRequest) {
@@ -35,22 +34,25 @@ export async function middleware(request: NextRequest) {
   // Apply i18n middleware
   const intlResponse = intlMiddleware(request)
 
-  // Protected paths (after locale prefix)
+  // Strip locale prefix to get canonical path
   const pathWithoutLocale = pathname.replace(/^\/(en|fr|de|nl|pt|es)/, '')
-  const isProtected = protectedPaths.some(p => pathWithoutLocale.startsWith(p))
+
   const isAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password'].some(p =>
     pathWithoutLocale.startsWith(p)
   )
 
-  if (isProtected && !user) {
-    return NextResponse.redirect(new URL('/en/login', request.url))
-  }
-
+  // Auth routes: redirect logged-in users away
   if (isAuthRoute && user) {
     return NextResponse.redirect(new URL('/en', request.url))
   }
 
+  // Everything else requires login
+  if (!isAuthRoute && !user) {
+    return NextResponse.redirect(new URL('/en/login', request.url))
+  }
+
   return intlResponse || supabaseResponse
+
 }
 
 export const config = {
