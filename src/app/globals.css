@@ -128,3 +128,9 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  .input {
+    @apply w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring;
+  }
+}
