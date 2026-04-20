@@ -129,20 +129,12 @@ export function Navbar({ user, userRole }: NavbarProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/en/login"
-                  className="px-3 py-1.5 text-sm rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-                >
-                  {t('login')}
-                </Link>
-                <Link
-                  href="/en/register"
-                  className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
-                >
-                  {t('register')}
-                </Link>
-              </div>
+              <Link
+                href="/en/login"
+                className="px-4 py-1.5 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors"
+              >
+                Sign in
+              </Link>
             )}
           </div>
         </div>

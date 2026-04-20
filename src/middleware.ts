@@ -37,9 +37,7 @@ export async function middleware(request: NextRequest) {
   // Strip locale prefix to get canonical path
   const pathWithoutLocale = pathname.replace(/^\/(en|fr|de|nl|pt|es)/, '')
 
-  const isAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password'].some(p =>
-    pathWithoutLocale.startsWith(p)
-  )
+  const isAuthRoute = pathWithoutLocale.startsWith('/login')
 
   // Auth routes: redirect logged-in users away
   if (isAuthRoute && user) {
