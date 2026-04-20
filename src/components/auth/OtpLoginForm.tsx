@@ -16,10 +16,7 @@ export function OtpLoginForm() {
     setError(null)
     startTransition(async () => {
       const result = await sendOtp(email)
-      if (result?.error) {
-        setError(result.error)
-        return
-      }
+      if (result?.error) { setError(result.error); return }
       setStep('otp')
     })
   }
@@ -34,29 +31,26 @@ export function OtpLoginForm() {
   }
 
   function handleResend() {
-    setToken('')
-    setError(null)
+    setToken(''); setError(null)
     startTransition(async () => { await sendOtp(email) })
   }
 
   // ── Email step ──────────────────────────────────────────────
   if (step === 'email') {
     return (
-      <div className="p-8 space-y-6">
+      <div className="p-7 space-y-5">
         {/* Branding */}
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary shadow-md">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-md">
             <Map className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">Roadmap</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Enter your email to sign in
-            </p>
+            <h1 className="text-lg font-bold tracking-tight">Roadmap</h1>
+            <p className="text-sm text-muted-foreground">Enter your email to sign in</p>
           </div>
         </div>
 
-        <form onSubmit={handleSendOtp} className="space-y-4">
+        <form onSubmit={handleSendOtp} className="space-y-3">
           <div className="space-y-1.5">
             <label htmlFor="email" className="text-sm font-medium">
               Email address
@@ -103,22 +97,22 @@ export function OtpLoginForm() {
 
   // ── OTP step ───────────────────────────────────────────────
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-7 space-y-5">
       {/* Branding */}
-      <div className="flex flex-col items-center gap-3 text-center">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
           <Mail className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Check your email</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            We sent a 6-digit code to{' '}
+          <h1 className="text-lg font-bold tracking-tight">Check your email</h1>
+          <p className="text-sm text-muted-foreground">
+            Sent a 6-digit code to{' '}
             <span className="font-medium text-foreground">{email}</span>
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleVerifyOtp} className="space-y-4">
+      <form onSubmit={handleVerifyOtp} className="space-y-3">
         <input
           type="text"
           inputMode="numeric"
@@ -149,7 +143,7 @@ export function OtpLoginForm() {
         </button>
       </form>
 
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-1.5">
         <button
           type="button"
           onClick={handleResend}
