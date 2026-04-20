@@ -3,7 +3,7 @@ import { getUser } from '@/lib/auth'
 import { ItemFilters } from '@/components/public/ItemFilters'
 import { VoteButton } from '@/components/public/VoteButton'
 import { CreateItemForm } from '@/components/public/CreateItemForm'
-import { KanbanBoard } from '@/components/public/KanbanBoard'
+import { RoadmapView } from '@/components/public/RoadmapView'
 import Link from 'next/link'
 import { LayoutList, LayoutGrid } from 'lucide-react'
 
@@ -26,6 +26,8 @@ interface ItemRow {
   slug: string
   total_votes: number
   is_pinned: boolean
+  horizon: string | null
+  quarter: string | null
   board: BoardRow | null
   project: ProjectRow | null
   created_at: string
@@ -43,7 +45,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const isBoardView = params.view === 'board'
   const showSuggestForm = params.suggest === '1'
 
-  // Fetch boards and projects
+  // Fetch boards and projects for filters
   const [boardsRes, projectsRes] = await Promise.all([
     supabase.from('boards').select('id, name, color').order('sort_order'),
     supabase.from('projects').select('id, name, slug').eq('is_private', false).order('sort_order'),
@@ -55,7 +57,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   // Build items query
   let query = supabase
     .from('items')
-    .select('id, title, slug, total_votes, is_pinned, board:boards(id,name,color), project:projects(id,name,slug), created_at')
+    .select('id, title, slug, total_votes, is_pinned, horizon, quarter, board:boards(id,name,color), project:projects(id,name,slug), created_at')
     .eq('is_private', false)
 
   if (params.board) query = query.eq('board_id', params.board)
@@ -81,13 +83,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const votedSet = new Set(votedItemIds)
 
-  // Build view toggle URLs (preserve other params)
+  // Build view toggle URLs
   const listParams = new URLSearchParams()
   const boardParams = new URLSearchParams()
-  if (params.board) { listParams.set('board', params.board); boardParams.set('board', params.board) }
+  if (params.board)   { listParams.set('board', params.board);   boardParams.set('board', params.board) }
   if (params.project) { listParams.set('project', params.project); boardParams.set('project', params.project) }
-  if (params.sort) { listParams.set('sort', params.sort); boardParams.set('sort', params.sort) }
+  if (params.sort)    { listParams.set('sort', params.sort);     boardParams.set('sort', params.sort) }
   boardParams.set('view', 'board')
+
+  const horizonBadge = (h: string | null) => {
+    if (h === 'now')   return { label: 'Now',  cls: 'bg-emerald-500/10 text-emerald-600' }
+    if (h === 'next')  return { label: 'Next', cls: 'bg-blue-500/10 text-blue-600' }
+    if (h === 'later') return { label: 'Later', cls: 'bg-violet-500/10 text-violet-600' }
+    return null
+  }
 
   return (
     <div className="space-y-6">
@@ -120,7 +129,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:bg-accent'
               }`}
-              title="Board view"
+              title="Roadmap view"
             >
               <LayoutGrid className="h-4 w-4" />
             </Link>
@@ -149,8 +158,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       {/* Views */}
       {isBoardView ? (
-        <KanbanBoard
-          boards={boards}
+        <RoadmapView
           items={items}
           votedItemIds={votedItemIds}
           isLoggedIn={!!user}
@@ -163,54 +171,59 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <p className="text-sm mt-1">
                 {user ? (
                   <>Be the first to <Link href="?suggest=1" className="text-primary hover:underline">suggest a feature</Link>!</>
-                ) : (
-                  'Sign in to suggest a feature'
-                )}
+                ) : 'Sign in to suggest a feature'}
               </p>
             </div>
           ) : (
-            items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 p-4 rounded-xl border bg-card hover:bg-accent/30 transition-colors group"
-              >
-                <VoteButton
-                  itemId={item.id}
-                  itemSlug={item.slug}
-                  totalVotes={item.total_votes}
-                  hasVoted={votedSet.has(item.id)}
-                  disabled={!user}
-                />
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/en/items/${item.slug}`}
-                    className="block font-medium group-hover:text-primary transition-colors truncate"
-                  >
-                    {item.is_pinned && (
-                      <span className="mr-2 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                        Pinned
-                      </span>
-                    )}
-                    {item.title}
-                  </Link>
-                  <div className="flex items-center gap-2 mt-1">
-                    {item.board && (
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ backgroundColor: `${item.board.color}20`, color: item.board.color }}
-                      >
-                        {item.board.name}
-                      </span>
-                    )}
-                    {item.project && (
-                      <span className="text-xs text-muted-foreground">
-                        {item.project.name}
-                      </span>
-                    )}
+            items.map((item) => {
+              const badge = horizonBadge(item.horizon)
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-4 p-4 rounded-xl border bg-card hover:bg-accent/30 transition-colors group"
+                >
+                  <VoteButton
+                    itemId={item.id}
+                    itemSlug={item.slug}
+                    totalVotes={item.total_votes}
+                    hasVoted={votedSet.has(item.id)}
+                    disabled={!user}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      href={`/en/items/${item.slug}`}
+                      className="block font-medium group-hover:text-primary transition-colors truncate"
+                    >
+                      {item.is_pinned && (
+                        <span className="mr-2 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                          Pinned
+                        </span>
+                      )}
+                      {item.title}
+                    </Link>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {badge && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${badge.cls}`}>
+                          {badge.label}
+                          {item.horizon === 'later' && item.quarter && ` · ${item.quarter}`}
+                        </span>
+                      )}
+                      {item.board && (
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{ backgroundColor: `${item.board.color}20`, color: item.board.color }}
+                        >
+                          {item.board.name}
+                        </span>
+                      )}
+                      {item.project && (
+                        <span className="text-xs text-muted-foreground">{item.project.name}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       )}

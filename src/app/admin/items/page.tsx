@@ -11,6 +11,7 @@ export default async function AdminItemsPage() {
       .from('items')
       .select(`
         id, title, slug, total_votes, is_pinned, is_private, created_at,
+        horizon, quarter,
         board:boards(id, name, color),
         project:projects(id, name),
         author:profiles!items_user_id_fkey(name, email)

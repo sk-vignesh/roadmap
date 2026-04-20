@@ -103,6 +103,8 @@ export async function updateItem(
     is_private?: boolean
     is_pinned?: boolean
     notify_subscribers?: boolean
+    horizon?: string | null
+    quarter?: string | null
   }
 ) {
   const supabase = await createClient()
@@ -112,6 +114,7 @@ export async function updateItem(
   revalidatePath('/en')
   return { success: true }
 }
+
 
 // ── Delete Item (admin) ───────────────────────────────────────────────────────
 export async function deleteItem(id: string) {
