@@ -75,6 +75,10 @@ export function AdminItemsTable({ items, boards, projects }: AdminItemsTableProp
     return matchesSearch && matchesHorizon
   })
 
+  function handleBoardChange(id: string, boardId: string) {
+    startTransition(() => { void updateItem(id, { board_id: boardId || null }) })
+  }
+
   function handleHorizonChange(id: string, horizon: string) {
     const val = horizon || null
     // Clear quarter if horizon is no longer 'later'
@@ -145,6 +149,7 @@ export function AdminItemsTable({ items, boards, projects }: AdminItemsTableProp
             <thead className="bg-muted/50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 font-medium">Title</th>
+                <th className="text-left px-4 py-3 font-medium">Status</th>
                 <th className="text-left px-4 py-3 font-medium">Horizon</th>
                 <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Author</th>
                 <th className="text-center px-4 py-3 font-medium w-16">
@@ -173,6 +178,20 @@ export function AdminItemsTable({ items, boards, projects }: AdminItemsTableProp
                       <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                       </span>
+                    </td>
+
+                    {/* Status (board) */}
+                    <td className="px-4 py-3">
+                      <select
+                        defaultValue={item.board?.id ?? ''}
+                        onChange={e => handleBoardChange(item.id, e.target.value)}
+                        className="text-xs rounded-md border px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-ring min-w-[120px]"
+                      >
+                        <option value="">— No status —</option>
+                        {boards.map(b => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
                     </td>
 
                     {/* Horizon + Quarter */}
