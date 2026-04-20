@@ -54,22 +54,35 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const boards = (boardsRes.data ?? []) as BoardRow[]
   const projects = (projectsRes.data ?? []) as ProjectRow[]
 
-  // Build items query
-  let query = supabase
-    .from('items')
-    .select('id, title, slug, total_votes, is_pinned, horizon, quarter, board:boards(id,name,color), project:projects(id,name,slug), created_at')
-    .eq('is_private', false)
+  // Build items query — try with horizon/quarter, fall back without if columns don't exist yet
+  const buildQuery = (withHorizon: boolean) => {
+    const cols = withHorizon
+      ? 'id, title, slug, total_votes, is_pinned, horizon, quarter, board:boards(id,name,color), project:projects(id,name,slug), created_at'
+      : 'id, title, slug, total_votes, is_pinned, board:boards(id,name,color), project:projects(id,name,slug), created_at'
 
-  if (params.board) query = query.eq('board_id', params.board)
-  if (params.project) query = query.eq('project_id', params.project)
-  if (params.sort === 'new') {
-    query = query.order('created_at', { ascending: false })
-  } else {
-    query = query.order('is_pinned', { ascending: false }).order('total_votes', { ascending: false })
+    let q = supabase.from('items').select(cols).eq('is_private', false)
+    if (params.board)   q = q.eq('board_id', params.board)
+    if (params.project) q = q.eq('project_id', params.project)
+    if (params.sort === 'new') {
+      q = q.order('created_at', { ascending: false })
+    } else {
+      q = q.order('is_pinned', { ascending: false }).order('total_votes', { ascending: false })
+    }
+    return q.limit(200)
   }
 
-  const { data: rawItems } = await query.limit(200)
+  let rawItems: unknown[] | null = null
+  const { data: d1, error: e1 } = await buildQuery(true)
+  if (e1) {
+    // horizon/quarter columns not migrated yet — fall back to base columns
+    const { data: d2 } = await buildQuery(false)
+    rawItems = d2
+  } else {
+    rawItems = d1
+  }
+
   const items = (rawItems as unknown as ItemRow[]) ?? []
+
 
   // Fetch user votes
   let votedItemIds: string[] = []
