@@ -18,17 +18,22 @@ export async function requireAdmin() {
   const user = await getUser()
   if (!user) redirect('/en/login')
 
-  const { data } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
 
-  const profile = data as { role: string } | null
+    const profile = data as { role: string } | null
 
-  if (!profile || !['admin', 'employee'].includes(profile.role)) {
+    if (!profile || !['admin', 'employee'].includes(profile.role)) {
+      redirect('/')
+    }
+
+    return { user, profile }
+  } catch {
+    // DB schema not applied — treat as unauthorized
     redirect('/')
   }
-
-  return { user, profile }
 }

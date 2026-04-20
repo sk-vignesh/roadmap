@@ -8,13 +8,17 @@ export default async function PublicLayout({ children }: { children: ReactNode }
   let userRole: string | null = null
 
   if (user) {
-    const supabase = await createClient()
-    const { data } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    userRole = (data as { role: string } | null)?.role ?? null
+    try {
+      const supabase = await createClient()
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      userRole = (data as { role: string } | null)?.role ?? null
+    } catch {
+      // DB schema not applied yet
+    }
   }
 
   return (
