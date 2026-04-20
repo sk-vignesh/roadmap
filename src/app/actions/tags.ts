@@ -23,9 +23,18 @@ export async function createTag(data: {
   await requireAdmin()
   const supabase = await createClient()
   const slug = slugify(data.name)
-  const { error } = await supabase
+
+  // Try with color; if migration not yet run, insert without it
+  let { error } = await supabase
     .from('tags')
     .insert({ name: data.name, slug, color: data.color, is_changelog_tag: data.is_changelog_tag ?? false })
+
+  if (error?.message?.includes("'color'")) {
+    ;({ error } = await supabase
+      .from('tags')
+      .insert({ name: data.name, slug, is_changelog_tag: data.is_changelog_tag ?? false }))
+  }
+
   if (error) return { error: error.message }
   revalidatePath('/admin/tags')
   revalidatePath('/en')
@@ -41,7 +50,15 @@ export async function updateTag(
   const supabase = await createClient()
   const update: Record<string, unknown> = { ...data }
   if (data.name) update.slug = slugify(data.name)
-  const { error } = await supabase.from('tags').update(update).eq('id', id)
+
+  let { error } = await supabase.from('tags').update(update).eq('id', id)
+  if (error?.message?.includes("'color'")) {
+    // color column not yet in schema — strip it and retry
+    const { color: _color, ...withoutColor } = update as Record<string, unknown> & { color?: unknown }
+    void _color
+    ;({ error } = await supabase.from('tags').update(withoutColor).eq('id', id))
+  }
+
   if (error) return { error: error.message }
   revalidatePath('/admin/tags')
   revalidatePath('/en')
