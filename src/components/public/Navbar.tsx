@@ -2,9 +2,9 @@
 
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
-import { signOut } from '@/app/actions/auth'
+import { createClient } from '@/lib/supabase/client'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Map, LogOut, User as UserIcon, LayoutDashboard, Bookmark } from 'lucide-react'
+import { Map, LogOut, User as UserIcon, LayoutDashboard } from 'lucide-react'
 
 interface NavbarProps {
   user: User | null
@@ -24,8 +24,16 @@ interface NavbarProps {
 export function Navbar({ user, userRole }: NavbarProps) {
   const t = useTranslations('nav')
   const pathname = usePathname()
+  const router = useRouter()
 
   const isActive = (path: string) => pathname.includes(path)
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/en/login')
+    router.refresh()
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-sm">
@@ -70,7 +78,7 @@ export function Navbar({ user, userRole }: NavbarProps) {
           <div className="flex items-center gap-2">
             {user ? (
               <DropdownMenu>
-                <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer">
                   <Avatar className="h-8 w-8">
                     <AvatarImage
                       src={user.user_metadata?.avatar_url}
@@ -87,7 +95,7 @@ export function Navbar({ user, userRole }: NavbarProps) {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {user.user_metadata?.name ?? 'User'}
+                        {user.user_metadata?.name ?? user.email?.split('@')[0] ?? 'User'}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user.email}
@@ -95,35 +103,39 @@ export function Navbar({ user, userRole }: NavbarProps) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Link href="/en/my" className="flex items-center gap-2 w-full">
-                      <Bookmark className="h-4 w-4" />
-                      {t('my_items')}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="/en/profile" className="flex items-center gap-2 w-full">
+
+                  <DropdownMenuItem className="p-0">
+                    <Link
+                      href="/en/profile"
+                      className="flex items-center gap-2 w-full px-1.5 py-1 cursor-pointer"
+                    >
                       <UserIcon className="h-4 w-4" />
                       {t('profile')}
                     </Link>
                   </DropdownMenuItem>
+
                   {userRole && ['admin', 'employee'].includes(userRole) && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <Link href="/admin" className="flex items-center gap-2 w-full">
+                      <DropdownMenuItem className="p-0">
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-2 w-full px-1.5 py-1 cursor-pointer"
+                        >
                           <LayoutDashboard className="h-4 w-4" />
                           {t('admin')}
                         </Link>
                       </DropdownMenuItem>
                     </>
                   )}
+
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer text-destructive focus:text-destructive"
-                    onClick={() => signOut()}
+                    variant="destructive"
+                    className="cursor-pointer"
+                    onClick={handleSignOut}
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
+                    <LogOut className="h-4 w-4" />
                     {t('logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
