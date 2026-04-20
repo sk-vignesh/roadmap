@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { VoteButton } from './VoteButton'
+import { TagBadge } from './TagBadge'
 
+interface TagRow { id: string; name: string; color: string }
 interface ItemRow {
   id: string
   title: string
@@ -13,6 +15,7 @@ interface ItemRow {
   quarter: string | null
   board: { id: string; name: string; color: string } | null
   project: { id: string; name: string; slug: string } | null
+  item_tags: { tag: TagRow | null }[]
 }
 
 interface RoadmapViewProps {
@@ -62,6 +65,9 @@ function ItemCard({
           {item.project && (
             <span className="text-[10px] text-muted-foreground">{item.project.name}</span>
           )}
+          {(item.item_tags ?? []).map(it => it.tag).filter(Boolean).map(tag => (
+            <TagBadge key={tag!.id} name={tag!.name} color={tag!.color} />
+          ))}
         </div>
         <div className="flex-none">
           <VoteButton

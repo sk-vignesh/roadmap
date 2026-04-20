@@ -3,6 +3,7 @@ import { getUser } from '@/lib/auth'
 import { notFound } from 'next/navigation'
 import { VoteButton } from '@/components/public/VoteButton'
 import { CommentForm } from '@/components/public/CommentForm'
+import { TagBadge } from '@/components/public/TagBadge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { formatDistanceToNow } from 'date-fns'
 import { MessageSquare, Calendar } from 'lucide-react'
@@ -21,6 +22,7 @@ interface CommentRow {
   user: { id: string; name: string | null; avatar_url: string | null; email: string } | null
 }
 
+interface TagRow { id: string; name: string; color: string }
 interface ItemDetail {
   id: string
   slug: string
@@ -31,9 +33,12 @@ interface ItemDetail {
   is_private: boolean
   issue_number: number | null
   created_at: string
+  horizon: string | null
+  quarter: string | null
   board: { id: string; name: string; color: string } | null
   project: { id: string; name: string; slug: string } | null
   author: { id: string; name: string | null; avatar_url: string | null; email: string } | null
+  item_tags: { tag: TagRow | null }[]
 }
 
 export async function generateMetadata({ params }: ItemPageProps) {
@@ -60,9 +65,11 @@ export default async function ItemPage({ params }: ItemPageProps) {
     .from('items')
     .select(`
       id, slug, title, description, total_votes, is_pinned, is_private, issue_number, created_at,
+      horizon, quarter,
       board:boards(id, name, color),
       project:projects(id, name, slug),
-      author:profiles!items_user_id_fkey(id, name, avatar_url, email)
+      author:profiles!items_user_id_fkey(id, name, avatar_url, email),
+      item_tags(tag:tags(id, name, color))
     `)
     .eq('slug', slug)
     .single()
@@ -128,6 +135,15 @@ export default async function ItemPage({ params }: ItemPageProps) {
                   {item.board.name}
                 </span>
               )}
+              {item.horizon && (
+                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                  item.horizon === 'now'  ? 'bg-emerald-500/10 text-emerald-600' :
+                  item.horizon === 'next' ? 'bg-blue-500/10 text-blue-600' :
+                  'bg-violet-500/10 text-violet-600'
+                }`}>
+                  {item.horizon === 'now' ? 'Now' : item.horizon === 'next' ? 'Next' : `Later${item.quarter ? ` · ${item.quarter}` : ''}`}
+                </span>
+              )}
               {item.project && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                   {item.project.name}
@@ -138,6 +154,9 @@ export default async function ItemPage({ params }: ItemPageProps) {
                   #{item.issue_number}
                 </span>
               )}
+              {(item.item_tags ?? []).map(it => it.tag).filter(Boolean).map(tag => (
+                <TagBadge key={tag!.id} name={tag!.name} color={tag!.color} />
+              ))}
             </div>
           </div>
         </div>

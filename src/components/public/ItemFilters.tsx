@@ -3,40 +3,31 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 
-interface Board {
-  id: string
-  name: string
-  color: string
-}
-
-interface Project {
-  id: string
-  name: string
-  slug: string
-}
+interface Board { id: string; name: string; color: string }
+interface Project { id: string; name: string; slug: string }
+interface Tag { id: string; name: string; color: string }
 
 interface ItemFiltersProps {
   boards: Board[]
   projects: Project[]
+  tags: Tag[]
 }
 
-export function ItemFilters({ boards, projects }: ItemFiltersProps) {
+export function ItemFilters({ boards, projects, tags }: ItemFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const activeBoard = searchParams.get('board')
+  const activeBoard   = searchParams.get('board')
   const activeProject = searchParams.get('project')
-  const activeSort = searchParams.get('sort') ?? 'votes'
+  const activeTag     = searchParams.get('tag')
+  const activeSort    = searchParams.get('sort') ?? 'votes'
 
   const update = useCallback(
     (key: string, value: string | null) => {
       const params = new URLSearchParams(searchParams.toString())
-      if (value) {
-        params.set(key, value)
-      } else {
-        params.delete(key)
-      }
+      if (value) params.set(key, value)
+      else params.delete(key)
       router.push(`${pathname}?${params.toString()}`)
     },
     [router, pathname, searchParams]
@@ -48,7 +39,7 @@ export function ItemFilters({ boards, projects }: ItemFiltersProps) {
       <div className="flex gap-2">
         {[
           { value: 'votes', label: 'Top' },
-          { value: 'new', label: 'New' },
+          { value: 'new',   label: 'New' },
         ].map(({ value, label }) => (
           <button
             key={value}
@@ -108,6 +99,30 @@ export function ItemFilters({ boards, projects }: ItemFiltersProps) {
               }`}
             >
               {p.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Tags */}
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {tags.map(t => (
+            <button
+              key={t.id}
+              onClick={() => update('tag', t.id === activeTag ? null : t.id)}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-full border transition-colors font-medium"
+              style={
+                t.id === activeTag
+                  ? { borderColor: t.color, backgroundColor: t.color, color: '#fff' }
+                  : { borderColor: `${t.color}60`, color: t.color, backgroundColor: `${t.color}11` }
+              }
+            >
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: t.id === activeTag ? '#fff' : t.color }}
+              />
+              {t.name}
             </button>
           ))}
         </div>

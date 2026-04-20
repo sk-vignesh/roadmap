@@ -4,6 +4,7 @@ import { ItemFilters } from '@/components/public/ItemFilters'
 import { VoteButton } from '@/components/public/VoteButton'
 import { CreateItemForm } from '@/components/public/CreateItemForm'
 import { RoadmapView } from '@/components/public/RoadmapView'
+import { TagBadge } from '@/components/public/TagBadge'
 import Link from 'next/link'
 import { LayoutList, LayoutGrid } from 'lucide-react'
 
@@ -14,11 +15,13 @@ interface HomePageProps {
     sort?: string
     suggest?: string
     view?: string
+    tag?: string
   }>
 }
 
 interface BoardRow { id: string; name: string; color: string }
 interface ProjectRow { id: string; name: string; slug: string }
+interface TagRow { id: string; name: string; color: string }
 interface VoteRow { item_id: string }
 interface ItemRow {
   id: string
@@ -31,6 +34,7 @@ interface ItemRow {
   board: BoardRow | null
   project: ProjectRow | null
   created_at: string
+  item_tags: { tag: TagRow | null }[]
 }
 
 export async function generateMetadata() {
@@ -45,24 +49,40 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const isBoardView = params.view === 'board'
   const showSuggestForm = params.suggest === '1'
 
-  // Fetch boards and projects for filters
-  const [boardsRes, projectsRes] = await Promise.all([
+  // Fetch metadata for filters in parallel
+  const [boardsRes, projectsRes, tagsRes] = await Promise.all([
     supabase.from('boards').select('id, name, color').order('sort_order'),
     supabase.from('projects').select('id, name, slug').eq('is_private', false).order('sort_order'),
+    supabase.from('tags').select('id, name, color').order('order_column'),
   ])
 
-  const boards = (boardsRes.data ?? []) as BoardRow[]
+  const boards   = (boardsRes.data ?? []) as BoardRow[]
   const projects = (projectsRes.data ?? []) as ProjectRow[]
+  const allTags  = (tagsRes.data ?? []) as TagRow[]
 
-  // Build items query — try with horizon/quarter, fall back without if columns don't exist yet
+  // If tag filter active, resolve the allowed item IDs first
+  let tagFilterIds: string[] | null = null
+  if (params.tag) {
+    const { data: taggedItems } = await supabase
+      .from('item_tags')
+      .select('item_id')
+      .eq('tag_id', params.tag)
+    tagFilterIds = (taggedItems ?? []).map((r: { item_id: string }) => r.item_id)
+  }
+
+  // Build items query — try with horizon/quarter + tags; fall back to base columns if migration pending
   const buildQuery = (withHorizon: boolean) => {
     const cols = withHorizon
-      ? 'id, title, slug, total_votes, is_pinned, horizon, quarter, board:boards(id,name,color), project:projects(id,name,slug), created_at'
+      ? 'id, title, slug, total_votes, is_pinned, horizon, quarter, board:boards(id,name,color), project:projects(id,name,slug), created_at, item_tags(tag:tags(id,name,color))'
       : 'id, title, slug, total_votes, is_pinned, board:boards(id,name,color), project:projects(id,name,slug), created_at'
 
     let q = supabase.from('items').select(cols).eq('is_private', false)
     if (params.board)   q = q.eq('board_id', params.board)
     if (params.project) q = q.eq('project_id', params.project)
+    if (tagFilterIds !== null) {
+      if (tagFilterIds.length === 0) return null   // no items match this tag
+      q = q.in('id', tagFilterIds)
+    }
     if (params.sort === 'new') {
       q = q.order('created_at', { ascending: false })
     } else {
@@ -72,17 +92,23 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   let rawItems: unknown[] | null = null
-  const { data: d1, error: e1 } = await buildQuery(true)
-  if (e1) {
-    // horizon/quarter columns not migrated yet — fall back to base columns
-    const { data: d2 } = await buildQuery(false)
-    rawItems = d2
+  const q1 = buildQuery(true)
+  if (q1 === null) {
+    rawItems = []
   } else {
-    rawItems = d1
+    const { data: d1, error: e1 } = await q1
+    if (e1) {
+      const q2 = buildQuery(false)
+      if (q2) {
+        const { data: d2 } = await q2
+        rawItems = d2
+      }
+    } else {
+      rawItems = d1
+    }
   }
 
   const items = (rawItems as unknown as ItemRow[]) ?? []
-
 
   // Fetch user votes
   let votedItemIds: string[] = []
@@ -97,11 +123,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const votedSet = new Set(votedItemIds)
 
   // Build view toggle URLs
-  const listParams = new URLSearchParams()
+  const listParams  = new URLSearchParams()
   const boardParams = new URLSearchParams()
-  if (params.board)   { listParams.set('board', params.board);   boardParams.set('board', params.board) }
+  if (params.board)   { listParams.set('board', params.board);     boardParams.set('board', params.board) }
   if (params.project) { listParams.set('project', params.project); boardParams.set('project', params.project) }
-  if (params.sort)    { listParams.set('sort', params.sort);     boardParams.set('sort', params.sort) }
+  if (params.sort)    { listParams.set('sort', params.sort);       boardParams.set('sort', params.sort) }
+  if (params.tag)     { listParams.set('tag', params.tag);         boardParams.set('tag', params.tag) }
   boardParams.set('view', 'board')
 
   const horizonBadge = (h: string | null) => {
@@ -167,7 +194,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       {/* Filters (only in list view) */}
       {!isBoardView && (
-        <ItemFilters boards={boards} projects={projects} />
+        <ItemFilters boards={boards} projects={projects} tags={allTags} />
       )}
 
       {/* Views */}
@@ -191,6 +218,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           ) : (
             items.map((item) => {
               const badge = horizonBadge(item.horizon)
+              const itemTags = (item.item_tags ?? []).map(it => it.tag).filter(Boolean) as TagRow[]
               return (
                 <div
                   key={item.id}
@@ -215,7 +243,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       )}
                       {item.title}
                     </Link>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       {badge && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${badge.cls}`}>
                           {badge.label}
@@ -233,6 +261,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       {item.project && (
                         <span className="text-xs text-muted-foreground">{item.project.name}</span>
                       )}
+                      {itemTags.map(tag => (
+                        <TagBadge key={tag.id} name={tag.name} color={tag.color} />
+                      ))}
                     </div>
                   </div>
                 </div>

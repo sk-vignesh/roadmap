@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { updateItem, deleteItem } from '@/app/actions/items'
+import { ItemTagSelector } from '@/components/admin/ItemTagSelector'
+import type { Tag } from '@/components/admin/ItemTagSelector'
 import {
   ChevronUp,
   Pin,
@@ -27,12 +29,14 @@ interface Item {
   board: Board | null
   project: Project | null
   author: { name: string | null; email: string } | null
+  item_tags: { tag: Tag }[]
 }
 
 interface AdminItemsTableProps {
   items: Item[]
   boards: Board[]
   projects: Project[]
+  allTags: Tag[]
 }
 
 const HORIZONS = [
@@ -60,7 +64,7 @@ function generateQuarters(): string[] {
 
 const QUARTERS = generateQuarters()
 
-export function AdminItemsTable({ items, boards, projects }: AdminItemsTableProps) {
+export function AdminItemsTable({ items, boards, projects, allTags }: AdminItemsTableProps) {
   const [search, setSearch] = useState('')
   const [horizonFilter, setHorizonFilter] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -151,6 +155,7 @@ export function AdminItemsTable({ items, boards, projects }: AdminItemsTableProp
                 <th className="text-left px-4 py-3 font-medium">Title</th>
                 <th className="text-left px-4 py-3 font-medium">Status</th>
                 <th className="text-left px-4 py-3 font-medium">Horizon</th>
+                <th className="text-left px-4 py-3 font-medium">Tags</th>
                 <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Author</th>
                 <th className="text-center px-4 py-3 font-medium w-16">
                   <ChevronUp className="h-4 w-4 mx-auto" />
@@ -228,6 +233,15 @@ export function AdminItemsTable({ items, boards, projects }: AdminItemsTableProp
                           </select>
                         )}
                       </div>
+                    </td>
+
+                    {/* Tags */}
+                    <td className="px-4 py-3">
+                      <ItemTagSelector
+                        itemId={item.id}
+                        initialTagIds={(item.item_tags ?? []).map(it => it.tag?.id).filter(Boolean)}
+                        allTags={allTags}
+                      />
                     </td>
 
                     {/* Author */}

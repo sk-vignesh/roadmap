@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth'
 import { AdminItemsTable } from '@/components/admin/AdminItemsTable'
 
 export const metadata = { title: 'Items — Admin' }
 
 export default async function AdminItemsPage() {
+  await requireAdmin()
   const supabase = await createClient()
 
-  const [itemsRes, boardsRes, projectsRes] = await Promise.all([
+  const [itemsRes, boardsRes, projectsRes, tagsRes] = await Promise.all([
     supabase
       .from('items')
       .select(`
@@ -14,12 +16,14 @@ export default async function AdminItemsPage() {
         horizon, quarter,
         board:boards(id, name, color),
         project:projects(id, name),
-        author:profiles!items_user_id_fkey(name, email)
+        author:profiles!items_user_id_fkey(name, email),
+        item_tags(tag:tags(id, name, color))
       `)
       .order('created_at', { ascending: false })
       .limit(500),
     supabase.from('boards').select('id, name, color').order('sort_order'),
     supabase.from('projects').select('id, name').order('sort_order'),
+    supabase.from('tags').select('id, name, color').order('order_column'),
   ])
 
   return (
@@ -33,9 +37,14 @@ export default async function AdminItemsPage() {
         </div>
       </div>
       <AdminItemsTable
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         items={(itemsRes.data as any) ?? []}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         boards={(boardsRes.data as any) ?? []}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         projects={(projectsRes.data as any) ?? []}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        allTags={(tagsRes.data as any) ?? []}
       />
     </div>
   )
