@@ -3,16 +3,9 @@
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState, useRef, useEffect } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Map, LogOut, User as UserIcon, LayoutDashboard } from 'lucide-react'
 
 interface NavbarProps {
@@ -24,15 +17,34 @@ export function Navbar({ user, userRole }: NavbarProps) {
   const t = useTranslations('nav')
   const pathname = usePathname()
   const router = useRouter()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const isActive = (path: string) => pathname.includes(path)
 
+  // Close on outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpen])
+
   async function handleSignOut() {
+    setMenuOpen(false)
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/en/login')
     router.refresh()
   }
+
+  const initials = (user?.user_metadata?.name ?? user?.email ?? 'U')
+    .charAt(0)
+    .toUpperCase()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-sm">
@@ -76,9 +88,14 @@ export function Navbar({ user, userRole }: NavbarProps) {
           {/* Right side */}
           <div className="flex items-center gap-2">
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className="h-8 w-8 rounded-full overflow-hidden border-2 border-transparent hover:border-primary/40 outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all cursor-pointer flex items-center justify-center bg-primary text-primary-foreground text-sm font-semibold"
+              <div ref={menuRef} className="relative">
+                {/* Avatar trigger */}
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(v => !v)}
+                  className="h-8 w-8 rounded-full overflow-hidden border-2 border-transparent hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring transition-all cursor-pointer flex items-center justify-center bg-primary text-primary-foreground text-sm font-semibold"
+                  aria-label="Open user menu"
+                  aria-expanded={menuOpen}
                 >
                   {user.user_metadata?.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -88,62 +105,57 @@ export function Navbar({ user, userRole }: NavbarProps) {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span>
-                      {(user.user_metadata?.name ?? user.email ?? 'U')
-                        .charAt(0)
-                        .toUpperCase()}
-                    </span>
+                    <span>{initials}</span>
                   )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
+                </button>
+
+                {/* Dropdown panel */}
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-xl border bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/10 z-50 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-100">
+                    {/* User info */}
+                    <div className="px-3 py-2.5 border-b">
+                      <p className="text-sm font-medium leading-none truncate">
                         {user.user_metadata?.name ?? user.email?.split('@')[0] ?? 'User'}
                       </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 truncate">{user.email}</p>
                     </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
 
-                  <DropdownMenuItem className="p-0">
-                    <Link
-                      href="/en/profile"
-                      className="flex items-center gap-2 w-full px-1.5 py-1 cursor-pointer"
-                    >
-                      <UserIcon className="h-4 w-4" />
-                      {t('profile')}
-                    </Link>
-                  </DropdownMenuItem>
+                    {/* Menu items */}
+                    <div className="p-1">
+                      <Link
+                        href="/en/profile"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        <UserIcon className="h-4 w-4 flex-none" />
+                        {t('profile')}
+                      </Link>
 
-                  {userRole && ['admin', 'employee'].includes(userRole) && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="p-0">
+                      {userRole && ['admin', 'employee'].includes(userRole) && (
                         <Link
                           href="/admin"
-                          className="flex items-center gap-2 w-full px-1.5 py-1 cursor-pointer"
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                         >
-                          <LayoutDashboard className="h-4 w-4" />
+                          <LayoutDashboard className="h-4 w-4 flex-none" />
                           {t('admin')}
                         </Link>
-                      </DropdownMenuItem>
-                    </>
-                  )}
+                      )}
+                    </div>
 
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    className="cursor-pointer"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    {t('logout')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <div className="border-t p-1">
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-md text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <LogOut className="h-4 w-4 flex-none" />
+                        {t('logout')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link
                 href="/en/login"
