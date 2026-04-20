@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Map, LogOut, User as UserIcon, LayoutDashboard } from 'lucide-react'
 
 interface NavbarProps {
@@ -78,18 +77,23 @@ export function Navbar({ user, userRole }: NavbarProps) {
           <div className="flex items-center gap-2">
             {user ? (
               <DropdownMenu>
-                <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage
-                      src={user.user_metadata?.avatar_url}
+                <DropdownMenuTrigger
+                  className="h-8 w-8 rounded-full overflow-hidden border-2 border-transparent hover:border-primary/40 outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all cursor-pointer flex items-center justify-center bg-primary text-primary-foreground text-sm font-semibold"
+                >
+                  {user.user_metadata?.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={user.user_metadata.avatar_url}
                       alt={user.user_metadata?.name ?? user.email ?? ''}
+                      className="h-full w-full object-cover"
                     />
-                    <AvatarFallback>
+                  ) : (
+                    <span>
                       {(user.user_metadata?.name ?? user.email ?? 'U')
                         .charAt(0)
                         .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                    </span>
+                  )}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="font-normal">
