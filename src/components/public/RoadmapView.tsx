@@ -158,6 +158,32 @@ export function RoadmapView({ items, votedItemIds, isLoggedIn }: RoadmapViewProp
 
   return (
     <div className="space-y-8">
+      {/* Under Consideration — unscheduled items awaiting triage */}
+      {unscheduled.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400 flex-none" />
+            <div>
+              <span className="text-sm font-bold">Under Consideration</span>
+              <span className="text-xs text-muted-foreground ml-2">Awaiting triage</span>
+            </div>
+            <span className="ml-auto text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+              {unscheduled.length}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 rounded-xl border-2 border-dashed border-amber-400/30 bg-amber-400/[0.03] p-3">
+            {unscheduled.map(item => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                voted={votedSet.has(item.id)}
+                isLoggedIn={isLoggedIn}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Now / Next columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Column
@@ -211,26 +237,6 @@ export function RoadmapView({ items, votedItemIds, isLoggedIn }: RoadmapViewProp
             ))}
           </div>
         </div>
-      )}
-
-      {/* Unscheduled */}
-      {unscheduled.length > 0 && (
-        <details className="group">
-          <summary className="flex items-center gap-2 cursor-pointer list-none text-sm text-muted-foreground hover:text-foreground">
-            <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
-            Unscheduled ({unscheduled.length})
-          </summary>
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {unscheduled.map(item => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                voted={votedSet.has(item.id)}
-                isLoggedIn={isLoggedIn}
-              />
-            ))}
-          </div>
-        </details>
       )}
     </div>
   )
