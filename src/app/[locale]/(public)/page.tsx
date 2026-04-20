@@ -95,7 +95,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     if (h === 'now')   return { label: 'Now',  cls: 'bg-emerald-500/10 text-emerald-600' }
     if (h === 'next')  return { label: 'Next', cls: 'bg-blue-500/10 text-blue-600' }
     if (h === 'later') return { label: 'Later', cls: 'bg-violet-500/10 text-violet-600' }
-    return null
+    // No horizon assigned — show amber "Under Consideration" so users know their item was received
+    return { label: 'Under Consideration', cls: 'bg-amber-400/10 text-amber-600' }
   }
 
   return (

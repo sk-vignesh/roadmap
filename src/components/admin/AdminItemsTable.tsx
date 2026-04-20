@@ -69,7 +69,9 @@ export function AdminItemsTable({ items, boards, projects }: AdminItemsTableProp
     const q = search.toLowerCase()
     const matchesSearch = item.title.toLowerCase().includes(q) ||
       (item.author?.name ?? item.author?.email ?? '').toLowerCase().includes(q)
-    const matchesHorizon = !horizonFilter || item.horizon === horizonFilter
+    const matchesHorizon =
+      !horizonFilter ||
+      (horizonFilter === 'unscheduled' ? !item.horizon : item.horizon === horizonFilter)
     return matchesSearch && matchesHorizon
   })
 
@@ -125,6 +127,7 @@ export function AdminItemsTable({ items, boards, projects }: AdminItemsTableProp
           className="px-3 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All horizons</option>
+          <option value="unscheduled">⏳ Unscheduled</option>
           <option value="now">🟢 Now</option>
           <option value="next">🔵 Next</option>
           <option value="later">🟣 Later</option>
